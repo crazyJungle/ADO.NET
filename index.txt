@@ -1,0 +1,70 @@
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+
+namespace ASP20170211
+{
+    public partial class index : System.Web.UI.Page
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        protected void ButtonLogin_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string username = TextUserName.Text.Trim();
+                string pwd = TextBoxPwd.Text.Trim();
+                if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(pwd))
+                {
+                    Response.Write("UserName or Password doesn't be wrong!");
+                }
+                else
+                {
+                    //The ADO just like one call one
+                    //1.Similar to the telphone numbers
+                    //string connStr = "Database=TestDB;Server=.;Integrated Security=false;Uid=sa;Password=123456;";
+                    string connStr = ConfigurationManager.ConnectionStrings["sq_ruanmou"].ToString();
+                    //2.it likes the mobiephone
+                    SqlConnection con = new SqlConnection(connStr);
+                    //3.Call by the phone and numbers
+                    con.Open();
+                    //4.These are the words what are you want to say.
+                    //string sSql = "select UId from UserInfo where UserName='" + username + "' and Pwd='" + pwd + "'";
+                    string sSql = string.Format("select UserInfor.UserId from UserInfor where UserName='{0}' and Pwd = '{1}'", username, pwd);
+                    //5.Executing the action 
+                    using (SqlCommand cmd = new SqlCommand(sSql, con))
+                    {
+                        //6.acquire the responding
+                        using (SqlDataReader read = cmd.ExecuteReader())
+                        {
+                            //Wheather the other respond you
+                            if (read.HasRows)
+                            {
+                                //if success,and then,response the other's WebPage.
+                                Response.Redirect("UserM.aspx");
+                                //Response.Write("Success for Login!");
+                            }
+                            else
+                            {
+                                Response.Write("UserName or Password doesn't be wrong!");
+                            }
+                        }
+                    }
+                }
+            }
+            catch 
+            {   
+                Response.Write("The WebSite is under repairing...");
+            }
+           
+        }
+    }
+}

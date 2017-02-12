@@ -1,0 +1,205 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.Text;
+
+namespace ASP20170211
+{
+    public partial class UserM : System.Web.UI.Page
+    {
+        string connStr = ConfigurationManager.ConnectionStrings["sq_ruanmou"].ToString();
+        SqlConnection con = null;
+        public void OpenDB()
+        {
+            try
+            {
+                con = new SqlConnection(connStr);
+                con.Open();
+            }
+            catch (Exception)
+            {
+                Response.Write("未知错误!");
+            }
+        }
+        public void BindUser()
+        {
+            OpenDB();
+            try
+            {
+                string sSql = getSql();
+                using (SqlCommand com = new SqlCommand(sSql, con))
+                {
+                    using (SqlDataReader reader = com.ExecuteReader())
+                    {
+                        if (reader.HasRows)
+                        {
+                            GridViewUserM.DataSource = reader;//get the data
+                            GridViewUserM.DataBind();//bind the data
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                Response.Write("未知错误!");
+            }
+        }
+        public string getSql()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("select UserId,RealName,UserName,Pwd,PhoneNum,Phase,QQ from UserInfor where 1=1");
+            if (!string.IsNullOrEmpty(TextBoxUserName.Text.Trim()))
+            {
+                sb.Append(string.Format(" and UserName={0}", TextBoxUserName.Text.Trim()));
+            }
+            if (DropDownListPhase.SelectedIndex > 0)
+            {
+                sb.Append(string.Format("and Phase= '{0}'", DropDownListPhase.SelectedValue));//must use the '' contain the string-col
+            }
+            sb.Append("order by UserId desc");
+            return sb.ToString();
+        }
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            //when you click the asp:button to submit,the method will excute the Page_Load method,if you add the "!IsPostBack",it doesn't call the behind "BindUser()" again.
+            if (!IsPostBack)//只调用下面这个方法一次
+            {
+                BindUser();
+            }
+            #region
+            //packing the following 3 lines codes into a method called "OpenDB"
+            //string connStr = ConfigurationManager.ConnectionStrings["sq_ruanmou"].ToString();
+            //SqlConnection con = new SqlConnection(connStr);
+            //con.Open();
+            //---------------------------packing the following codes into a method called "BindUser()"----------------
+            //OpenDB();
+            //string sSql = getSql();
+            //using(SqlCommand com = new SqlCommand(sSql,con))
+            //{
+            //    using(SqlDataReader reader = com.ExecuteReader())
+            //    {
+            //        if (reader.HasRows)
+            //        {
+            //            GridViewUserM.DataSource = reader;//get the data
+            //            GridViewUserM.DataBind();//bind the data
+            //        }
+            //    }
+            //}
+            #endregion
+        }
+
+        protected void ButtonAdd_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string sUserName = TextBoxUserNameAdd.Text.Trim();
+                string sPwd = TextBoxPwdAdd.Text.Trim();
+                string sQQ = TextBoxQQAdd.Text.Trim();
+                string sPhase = DropDownListPhase.SelectedIndex > 0 ? DropDownListPhase.SelectedValue : "";
+                string sSql = string.Format("insert into UserInfor(UserName,Pwd,QQ,Phase) values('{0}','{1}','{2}','{3}')", sUserName, sPwd, sQQ, sPhase);
+                using (SqlCommand cmd = new SqlCommand(sSql, con))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+                BindUser();
+            }
+            catch (Exception)
+            {
+                Response.Write("未知错误!");
+            }
+        }
+
+        //whether contain below method or not,it can call the  Page_Load method when you click the asp:button,and then,Loading the page again.
+        protected void ButtonSearch_Click(object sender, EventArgs e)
+        {
+            BindUser();
+        }
+
+        //修改
+        protected void ButtonUpdate_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                int iUserId = Convert.ToInt32(TextBoxUserIdUpdate.Text.Trim());
+                string sUserName = TextBoxUserNameUpdate.Text.Trim();
+                string sSqlEstimate = string.Format("select UserId from UserInfor where UserId={0}", iUserId);
+                OpenDB();
+                using (SqlCommand comEstimate = new SqlCommand(sSqlEstimate, con))
+                {
+                    #region
+                    //using (SqlDataReader readEstimate = comEstimate.ExecuteReader())
+                    //{
+                    //    if (readEstimate.HasRows)
+                    //    {
+                    //        string sSqlUpdate = string.Format("update UserInfor set UserName = {0}", sUserName);
+                    //        SqlCommand cmdUpdate = new SqlCommand(sSqlUpdate, con);
+                    //        cmdUpdate.ExecuteNonQuery();//上面的SqlDataReader未关闭不能使用,此时应该不使用using(){}
+                    //    }
+                    //    else
+                    //    {
+                    //        Response.Write("该用户ID不存在!");
+                    //    }
+                    //}
+                    #endregion
+                    SqlDataReader readEstimate = comEstimate.ExecuteReader();
+                    if (readEstimate.HasRows)
+                    {
+                        readEstimate.Dispose();
+                        readEstimate.Close();
+                        string sSqlUpdate = string.Format("update UserInfor set UserName = '{0}' where UserId={1}", sUserName,iUserId);
+                        SqlCommand cmdUpdate = new SqlCommand(sSqlUpdate, con);
+                        cmdUpdate.ExecuteNonQuery();//上面的SqlDataReader未关闭不能使用,此时应该不使用using(){}
+                    }
+                    else
+                    {
+                        Response.Write("该用户ID不存在!");
+                    }
+                    
+                }
+                BindUser();
+            }
+            catch (Exception)
+            {
+               Response.Write("未知错误!");
+            }
+        }
+
+        //删除
+        protected void ButtonDel_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                int iUserId = Convert.ToInt32(TextBoxIDDel.Text.Trim());
+                string sSqlEstimate = string.Format("select UserId from UserInfor where UserId={0}", iUserId);
+                OpenDB();
+                using (SqlCommand comEstimate = new SqlCommand(sSqlEstimate, con))
+                {
+                    SqlDataReader readEstimate = comEstimate.ExecuteReader();
+                    if (readEstimate.HasRows)
+                    {
+                        readEstimate.Dispose();
+                        readEstimate.Close();
+                        string sSqlUpdate = string.Format("delete UserInfor where UserId={0}", iUserId);
+                        SqlCommand cmdUpdate = new SqlCommand(sSqlUpdate, con);
+                        cmdUpdate.ExecuteNonQuery();//上面的SqlDataReader未关闭不能使用,此时应该不使用using(){}
+                    }
+                    else
+                    {
+                        Response.Write("该用户ID不存在!");
+                    }
+
+                }
+                BindUser();
+            }
+            catch (Exception)
+            {
+                Response.Write("未知错误!");
+            }
+        }
+    }
+}
